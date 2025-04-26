@@ -1,0 +1,5 @@
+repositories:
+  Azure_Kinect_ROS_Driver:
+    type: git
+    url: https://github.com/microsoft/Azure_Kinect_ROS_Driver.git
+    version: humble
