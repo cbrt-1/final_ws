@@ -13,6 +13,14 @@ cmake ..
 make
 ```
 
+```
+cd ~/final_ws/src
+git clone https://github.com/utexas-bwi/libsegwayrmp_ros2.git
+mv libsegwayrmp_ros2/ libsegwayrmp
+git clone https://github.com/utexas-bwi/segway_rmp_ros2.git
+
+```
+
 After cloning, run the command below in order to clone the other dependencies.
 ```
 vcs import src < ros2.repos
@@ -26,3 +34,7 @@ ros2 launch rtabmap_launch rtabmap.launch.py rgb_topic:=/rgb/image_raw depth_top
 ```
 ros2 run rviz2 rviz2
 ```
+
+ros2 launch bwi_launch segbot_v2.launch.py
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+ros2 launch nav2_bringup slam_launch.py
