@@ -1,4 +1,4 @@
-# fri_final
+# final_ws
 ```
 cd ~/final_ws
 git clone https://github.com/utexas-bwi/serial_for_ros2.git
