@@ -18,3 +18,4 @@ log
 # serial stuff
 serial
 serial_for_ros2
+src/libsegwayrmp
