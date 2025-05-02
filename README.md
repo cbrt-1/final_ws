@@ -38,3 +38,5 @@ ros2 run rviz2 rviz2
 ros2 launch bwi_launch segbot_v2.launch.py
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ros2 launch nav2_bringup slam_launch.py
+
+ros2 run rtabmap_viz rtabmap_viz
