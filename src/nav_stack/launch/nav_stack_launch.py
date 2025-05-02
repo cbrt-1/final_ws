@@ -6,15 +6,40 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     return LaunchDescription([
-        # Include the launch file from the rtabmap_launch package
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource('/opt/ros/humble/share/rtabmap_launch/launch/rtabmap.launch.py'),
-            launch_arguments={
-                'rgb_topic': '/rgb/image_raw', # Remapping input topic
-            }.items()
+        Node(
+            package='rtabmap_odom',
+            executable='rgbd_odometry',
+            name='rgbd_odometry',
+            output='screen', #output='screen',
+            parameters=[{
+                'visual_odometry': True,
+                'frame_id': 'depth_camera_link',
+            }],
+            remappings=[
+                ('/rgb/image', '/rgb/image_raw'),
+                ('/depth/image', '/depth_to_rgb/image_raw'),
+                ('/rgb/camera_info', '/rgb/camera_info')
+            ]
+        ),
+
+        Node(
+            package = 'rtabmap_slam',
+            executable= 'rtabmap',
+            name = 'rtabmap_slam_runner',
+            output = 'screen',
+            arguments=['-d'], # future me, -d deletes the database on start. ALIAS for --delete_db_on_start
+            parameters=[{
+                'subscribe_depth' : True,
+                'frame_id': 'depth_camera_link',
+            }],
+            remappings=[
+                ('/rgb/image', '/rgb/image_raw'),
+                ('/depth/image', '/depth_to_rgb/image_raw'),
+                ('/rgb/camera_info', '/rgb/camera_info')
+            ]
         ),
         
-        # You can add your own nodes here, if needed
+        # This is just for testing
         Node(
             package='nav_stack',
             executable='nav_node',
