@@ -10,15 +10,18 @@ find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED) # Find pcl_conversions ROS package
+find_package(PCL REQUIRED)           # Find the PCL library installation
 
-add_executable(planar_segmentation_node src/planar_segmentation_node.cpp)
-target_include_directories(planar_segmentation_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(planar_segmentation_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-install(TARGETS planar_segmentation_node
-  DESTINATION lib/${PROJECT_NAME})
+add_executable(planar src/planar-segmentation.cpp)
+ament_target_dependencies(planar 
+  rclcpp 
+  std_msgs
+  pcl_conversions
+  )
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -31,5 +34,9 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(TARGETS
+  planar
+  DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
