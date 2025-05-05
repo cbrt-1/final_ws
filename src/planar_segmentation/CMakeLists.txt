@@ -25,19 +25,21 @@ add_executable(planar src/planar-segmentation.cpp)
 # Add target dependencies
 ament_target_dependencies(planar
   rclcpp
-  rosidl_default_runtime # For linking generated code
-  geometry_msgs          # For publisher
-  std_msgs               # For header
-  pcl_conversions        # For PCL integration
+  rosidl_default_runtime # Still need this for runtime setup
+  geometry_msgs
+  std_msgs
+  pcl_conversions
 )
 
-# *** ADD THIS BLOCK ***
 # Manually add the include directory for generated C++ headers
-# This path is relative to the build directory for this package
 target_include_directories(planar PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include>)
-# *********************
+
+# Explicitly Link generated type support library (using plain signature)
+target_link_libraries(planar  # <-- REMOVED PUBLIC keyword
+  ${PROJECT_NAME}__rosidl_typesupport_cpp
+)
 
 # --- Keep the rest (testpcl target, install, testing, ament_package) ---
 
