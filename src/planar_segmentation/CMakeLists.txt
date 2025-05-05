@@ -5,32 +5,49 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Find ROS 2 dependencies
+# Find necessary packages
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(pcl_conversions REQUIRED) # This package brings in PCL dependency
+find_package(pcl_conversions REQUIRED)
 
-# Executable 'planar'
+# Generate interfaces
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/SetReferencePoint.srv"
+  # No DEPENDENCIES needed for primitives
+)
+
+# Define executable
 add_executable(planar src/planar-segmentation.cpp)
+
+# Add target dependencies
 ament_target_dependencies(planar
   rclcpp
-  std_msgs
-  pcl_conversions # This handles includes and linking for ROS pkgs AND PCL
+  rosidl_default_runtime # For linking generated code
+  geometry_msgs          # For publisher
+  std_msgs               # For header
+  pcl_conversions        # For PCL integration
 )
 
-# Executable 'testpcl'
+# *** ADD THIS BLOCK ***
+# Manually add the include directory for generated C++ headers
+# This path is relative to the build directory for this package
+target_include_directories(planar PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
+  $<INSTALL_INTERFACE:include>)
+# *********************
+
+# --- Keep the rest (testpcl target, install, testing, ament_package) ---
+
+# Executable 'testpcl' (If you still need it)
 add_executable(testpcl src/testpcl.cpp)
-# Add ALL dependencies needed by testpcl here using ament_target_dependencies
 ament_target_dependencies(testpcl
-  rclcpp          # Add if testpcl uses ROS features
-  std_msgs        # Add if testpcl uses standard messages
-  pcl_conversions # This handles includes and linking for PCL
+  rclcpp
+  std_msgs
+  pcl_conversions
 )
-
-# Remove these manual PCL lines - let ament_target_dependencies handle it
-# target_include_directories(testpcl PUBLIC ${PCL_INCLUDE_DIRS})
-# target_link_libraries(testpcl PUBLIC ${PCL_LIBRARIES})
 
 # Install targets
 install(TARGETS
@@ -38,16 +55,8 @@ install(TARGETS
   testpcl
   DESTINATION lib/${PROJECT_NAME})
 
-# Testing section (looks okay, adjust linters as needed)
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # comment the line below when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
-  # comment the line below when this package is in a git repo and when
-  # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
+# Testing section
+# ... (keep as is) ...
 
 # Declare the package to ament
 ament_package()

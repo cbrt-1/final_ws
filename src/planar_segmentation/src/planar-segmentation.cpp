@@ -25,9 +25,13 @@
 #include <pcl/common/centroid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
+#include "planar_segmentation/srv/set_reference_point.hpp"
+
 // Use PointXYZRGB based on your PCL code using .r, .g, .b later
 using PointT = pcl::PointXYZRGB;
+using SetReferencePoint = planar_segmentation::srv::SetReferencePoint;
 using std::placeholders::_1; // For std::bind
+
 
 class MinimalSubscriber : public rclcpp::Node
 {

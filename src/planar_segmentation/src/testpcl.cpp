@@ -1,9 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cmath> // Required for M_PI
-
-// PCL includes
+#include <cmath> 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
@@ -13,12 +11,11 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
-#include <pcl/search/kdtree.h>                 // For KdTree search method in clustering
-#include <pcl/segmentation/extract_clusters.h> // For Euclidean Clustering
-#include <pcl/common/centroid.h>               // For calculating centroids
-#include <pcl/kdtree/kdtree_flann.h>           // For KdTreeFLANN used for searching centroids
+#include <pcl/search/kdtree.h> 
+#include <pcl/segmentation/extract_clusters.h> 
+#include <pcl/common/centroid.h>
+#include <pcl/kdtree/kdtree_flann.h> 
 
-// Define PointT type alias for convenience
 using PointT = pcl::PointXYZRGB;
 
 int main()
@@ -29,50 +26,47 @@ int main()
   pcl::PointCloud<PointT>::Ptr filtered_cloud(new pcl::PointCloud<PointT>);
   pcl::PointCloud<PointT>::Ptr plane_cloud(new pcl::PointCloud<PointT>); // Cloud containing only plane points
 
+  // testing on an pre built point cloud first, port over to ros node once this works
   pcl::PCDReader cloud_reader;
   pcl::PCDWriter cloud_writer;
-  std::string path = "/home/7_fri/Downloads/"; // Make sure this path is correct
+  std::string path = "/home/7_fri/Downloads/";
 
-  // --- Load Cloud ---
+  
   if (cloud_reader.read(path + "cloud.pcd", *cloud) == -1)
   {
     PCL_ERROR("Couldn't read file cloud.pcd \n");
     return (-1);
   }
-  std::cout << "Loaded " << cloud->width * cloud->height << " data points from cloud.pcd." << std::endl;
 
-  // --- Optional Transformation ---
+  // fix the point cloud being generated upside down
   Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-  float angle = M_PI; // 180 degrees
-  // Applying rotation around Z then Y (check if this order gives desired result)
+  float angle = M_PI; // Z and Y rotation
   transform.rotate(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()));
   transform.rotate(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY()));
   pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
-  std::cout << "Applied transformation." << std::endl;
 
-  // --- Optional PassThrough Filter ---
+  //  threshsold
   pcl::PassThrough<PointT> pass;
-  pass.setInputCloud(transformed_cloud); // Filter the transformed cloud
+  pass.setInputCloud(transformed_cloud);
   pass.setFilterFieldName("y");
-  pass.setFilterLimits(-0.5, -0.2); // Adjust limits as needed
+  pass.setFilterLimits(-0.5, -0.2);
   pass.filter(*filtered_cloud);
-  std::cout << "Applied PassThrough filter. Points remaining: " << filtered_cloud->size() << std::endl;
 
   if (filtered_cloud->empty())
   {
-    PCL_ERROR("Cloud is empty after filtering. Cannot perform segmentation.\n");
+    PCL_ERROR("no points detected");
     return (-1);
   }
 
-  // --- Planar Segmentation (RANSAC) ---
+  // ransac segment plane
   pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
   pcl::SACSegmentation<PointT> plane_seg;
 
-  plane_seg.setOptimizeCoefficients(true); // Optional: Refine coefficients
+  plane_seg.setOptimizeCoefficients(true);
   plane_seg.setModelType(pcl::SACMODEL_PLANE);
   plane_seg.setMethodType(pcl::SAC_RANSAC);
-  plane_seg.setDistanceThreshold(0.01); // 1cm tolerance - Adjust as needed
+  plane_seg.setDistanceThreshold(0.01);
   plane_seg.setMaxIterations(100);      // Max iterations for RANSAC
 
   plane_seg.setInputCloud(filtered_cloud);
@@ -80,57 +74,49 @@ int main()
 
   if (inliers->indices.empty())
   {
-    PCL_ERROR("Could not estimate a planar model for the given dataset.\n");
+    PCL_ERROR("no planes");
     return (-1);
   }
 
-  std::cerr << "Plane coefficients: " << *coefficients << std::endl;
-  std::cout << "Found " << inliers->indices.size() << " inliers for the plane model." << std::endl;
 
-  // --- Extract Planar Points ---
+  // 
   pcl::ExtractIndices<PointT> extract_indices;
   extract_indices.setInputCloud(filtered_cloud);
   extract_indices.setIndices(inliers);
-  extract_indices.setNegative(false);   // Keep the points specified by the indices
-  extract_indices.filter(*plane_cloud); // Store planar points in plane_cloud
-  std::cout << "Extracted planar points into plane_cloud." << std::endl;
+  extract_indices.setNegative(false); //store either walls or floor
+  extract_indices.filter(*plane_cloud);
 
-  // --- Write the segmented plane cloud (optional) ---
+  // visualize current map
   cloud_writer.write<PointT>(path + "plane_seg_cloud.pcd", *plane_cloud, false);
-  std::cout << "Saved planar points to plane_seg_cloud.pcd" << std::endl;
 
-  // --- Euclidean Clustering on the Planar Points ---
-  std::cout << "Starting clustering on the planar points..." << std::endl;
 
-  // Create the KdTree object for the search method of the extraction
+
+  // cluster close points together
   pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
-  tree->setInputCloud(plane_cloud); // Use the extracted plane points
+  tree->setInputCloud(plane_cloud);
 
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<PointT> ec;
 
-  // Define clustering parameters (TUNE THESE!)
-  double cluster_tolerance = 0.05; // 5cm - Max distance between points in cluster
-  int min_cluster_size = 50;       // Minimum points per cluster
-  int max_cluster_size = 10000;    // Maximum points per cluster
+  double cluster_tolerance = 0.05; // 5cm - max distance between points in cluster
+  int min_cluster_size = 50;
+  int max_cluster_size = 10000;
 
   ec.setClusterTolerance(cluster_tolerance);
   ec.setMinClusterSize(min_cluster_size);
   ec.setMaxClusterSize(max_cluster_size);
   ec.setSearchMethod(tree);
-  ec.setInputCloud(plane_cloud); // Cluster the points belonging to the plane
+  ec.setInputCloud(plane_cloud); 
   ec.extract(cluster_indices);
 
   if (cluster_indices.empty())
   {
     PCL_WARN("No clusters found on the planar surface after extraction.\n");
-    // Decide if this is an error or just means no distinct groups
-    // return (-1); // Optional: exit if no clusters are found
+
   }
-  else
-  {
-    PCL_INFO("Found %ld clusters on the planar surface.\n", cluster_indices.size());
-  }
+
+
+  // prune all areas that are too small
   std::vector<pcl::PointIndices> filtered_clusters_by_points;
   for (const auto &cluster : cluster_indices)
   {
@@ -142,29 +128,25 @@ int main()
 
   pcl::PointIndices::Ptr combined_filtered_indices(new pcl::PointIndices);
   for (const auto &filtered_cluster : filtered_clusters_by_points)
-  { // Use the filtered list
+  { 
     combined_filtered_indices->indices.insert(
         combined_filtered_indices->indices.end(),
         filtered_cluster.indices.begin(),
         filtered_cluster.indices.end());
   }
 
-  // 2. Extract points using the combined indices
+  // calculate center of each surface using centroids
   pcl::PointCloud<PointT>::Ptr filtered_clusters_cloud(new pcl::PointCloud<PointT>);
   if (!combined_filtered_indices->indices.empty())
   {
-    // Re-use the extract_indices object, but set new input cloud and indices
-    extract_indices.setInputCloud(plane_cloud);            // Extract FROM the cloud containing all plane points
-    extract_indices.setIndices(combined_filtered_indices); // Use the combined indices of FILTERED clusters
-    extract_indices.setNegative(false);                    // Keep these points
-    extract_indices.filter(*filtered_clusters_cloud);      // Output cloud with only filtered cluster points
 
-    std::cout << "Created cloud with points from filtered clusters (" << filtered_clusters_cloud->size() << " points)." << std::endl;
+    extract_indices.setInputCloud(plane_cloud); 
+    extract_indices.setIndices(combined_filtered_indices); 
+    extract_indices.setNegative(false);
+    extract_indices.filter(*filtered_clusters_cloud);
 
-    // 3. Write the final cloud containing only filtered cluster points
     cloud_writer.write<PointT>(path + "non_plane_seg.pcd", *filtered_clusters_cloud, false);
 
-    // --- Calculate Centroids and Find Closest ---
     if (!cluster_indices.empty())
     {
       pcl::PointCloud<PointT>::Ptr centroid_cloud(new pcl::PointCloud<PointT>);
@@ -242,9 +224,8 @@ int main()
         PCL_WARN("KdTree search for nearest centroid failed.\n");
         // Handle case where search fails (e.g., centroid cloud was empty, though checked earlier)
       }
-    } // End if (!cluster_indices.empty())
+    }
 
-    std::cout << "Processing finished successfully." << std::endl;
     return (0); // Indicate successful execution
   }
 }

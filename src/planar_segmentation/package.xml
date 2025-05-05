@@ -3,12 +3,27 @@
 <package format="3">
   <name>planar_segmentation</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Node for planar segmentation and finding closest centroid.</description> <!-- Improved description -->
   <maintainer email="7_fri@flexo.com">7_fri</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Core ROS and Message Dependencies -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <!-- PCL Dependency -->
+  <depend>pcl_conversions</depend>
+
+  <!-- Service Generation Dependencies -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <!-- Testing Dependencies -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
